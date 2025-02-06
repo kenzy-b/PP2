@@ -3,5 +3,4 @@ def temperature(F):
     return C
 
 F = float(input("Fahrenheit: "))
-C = temperature(F)
-print(f"{F} Fahrenheit = {C} Centigrade")
+print("Fahrenheit: ",  temperature(F))
