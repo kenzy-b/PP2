@@ -119,7 +119,7 @@ while running:
             level += 1
             speed += 2
     else:
-        snake.pop()  # remove tail if not eating
+        snake.pop()  # removing tail after moving
 
     # Collision check
     if check_collision():
