@@ -1,5 +1,5 @@
 import pygame
-
+import sys
 def main():
     pygame.init()
     
@@ -122,3 +122,4 @@ def getColor(mode):
     return (255, 255, 255)  # Default white
 
 main()
+sys.exit()
