@@ -1,93 +1,111 @@
+import psycopg2
 import csv
-import psycopg2 as pgsql
+import os
 
 # Подключение к базе данных
-connection = pgsql.connect(host="localhost", dbname="phonebook", user="postgres", 
-                            password="010706")
-cur = connection.cursor()
+conn = psycopg2.connect(
+    dbname="phonebook",
+    user="postgres",
+    password="010706",
+    host="localhost",
+    client_encoding="utf8"
+)
 
-# Создание таблицы с полем id
-cur.execute("""
-    CREATE TABLE IF NOT EXISTS PhoneBook (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255),
-        phone VARCHAR(20)
-    );
-""")
+cur = conn.cursor()
 
-# Функция обновления данных
-def update(id, mode, newv):
-    query = f"UPDATE PhoneBook SET {mode} = %s WHERE id = %s"
-    cur.execute(query, (newv, id))
-
-# Функция удаления данных
-def delete(id):
-    query = "DELETE FROM PhoneBook WHERE id = %s"
-    cur.execute(query, (id,))
-
-# Вставка данных вручную
-while True:
-    print("Type 'enter' if you want to add more data and type 'stop' to break")
-    mode = input()
-    if mode == "stop":
-        break
-
-    name = input("Enter name: ")
-    phone = input("Enter phone: ")
-
-    cur.execute("INSERT INTO PhoneBook (name, phone) VALUES (%s, %s)",
-                (name, phone))
-
-# Вставка данных из CSV
-while True:
-    print("Want to insert data from csv file? yes/no:")
-    mode = input()
-    if mode == "no":
-        break
-    print("Enter the name of the file")
-    filename = input()
-
-    with open(filename + '.csv', 'r') as f:
-        reader = csv.reader(f)
-        next(reader)  # Пропустить заголовок
-        for row in reader:
-            cur.execute("INSERT INTO PhoneBook (name, phone) VALUES (%s, %s)", row)
-
-# Обновление данных
-while True:
-    print("Type 'update' to update some data or 'stop' to break")
-    mode = input()
-    if mode == "stop":
-        break
-
-    cur.execute("SELECT * FROM PhoneBook")
+def patternSearch():
+    pattern = input("Write pattern: ")
+    cur.execute("Select * from patternSearch(%s)", (pattern,))
     print(cur.fetchall())
 
-    id_to_change = input("Enter id: ")
-    column_to_change = input("What you want to change? name/phone: ")
-    new_value = input("Enter new name/phone: ")
+def insert_or_update():
+    name = input("name: ")
+    phone = input("phone: ")
+    cur.execute("CALL insert_or_update(%s, %s)", (name, phone))
+    conn.commit()
+    print("Successfully added/updated!")
 
-    update(id_to_change, column_to_change, new_value)
+def manyUsers():
+    n = int(input("How many users you want to add? "))
+    names = []
+    phones = []
 
-# Удаление данных
-while True:
-    print("Want to delete some data? yes/no")
-    mode = input()
-    if mode == "no":
-        break
+    for _ in range(n):
+        name = input("name: ")
+        phone = input("phone: ")
+        names.append(name)
+        phones.append(phone)
 
-    cur.execute("SELECT * FROM PhoneBook")
+    cur.execute("Call manyUsers(%s, %s)", (names, phones))
+    conn.commit()
+    print(f"Successfully added {n} users!")
+
+def pagination():
+    limit = int(input("How many rows do you want to display? "))
+    offset = int(input("Where do we start from? "))
+    cur.execute("Select * from pagination(%s, %s)", (limit, offset))
     print(cur.fetchall())
 
-    id_to_delete = input("Enter id: ")
-    delete(id_to_delete)
+def deletion():
+    nameOrPhone = input("Enter a name or phone number: ")
+    cur.execute("Call deletion(%s)", (nameOrPhone,))
+    conn.commit()
+    print("Successfully deleted!")
 
-# Сохранение изменений и закрытие соединения
-connection.commit()
+def import_from_csv():
+    filename = r"C:\Users\bayan\OneDrive\Desktop\PP2\lab10\data.csv"
+    if not os.path.exists(filename):
+        print(f"❌ Error: File '{filename}' not found in the current directory!")
+        return
+
+    try:
+        with open(filename, 'r', encoding='utf-8-sig') as file:
+            reader = csv.reader(file)
+            next(reader) 
+            
+            success_count = 0
+            for row in reader:
+                if len(row) != 2:
+                    print(f"⚠ Skipping invalid row: {row}")
+                    continue
+
+                name, phone = row
+                cur.execute("CALL insert_or_update(%s, %s)", (name.strip(), phone.strip()))
+                success_count += 1
+
+            conn.commit()
+            print(f"✅ Successfully imported {success_count} records from '{filename}'!")
+
+    except Exception as e:
+        print(f"❌ Error during CSV import: {e}")
+
+while True:
+    print("\n1. Search by pattern")
+    print("2. Add or update a single user")
+    print("3. Add 2 or more users")
+    print("4. Pagination")
+    print("5. Delete a user")
+    print("6. Import from CSV (data.csv)")
+    print("7. Exit")
+
+    choice = input("Choose an option: ")
+
+    if choice == "1":
+        patternSearch()
+    elif choice == "2":
+        insert_or_update()
+    elif choice == "3":
+        manyUsers()
+    elif choice == "4":
+        pagination()
+    elif choice == "5":
+        deletion()
+    elif choice == "6":
+        import_from_csv()
+    elif choice == "7":
+        break
+    else:
+        print("Invalid choice")
+
 cur.close()
-connection.close()
-
-
-
-
-
+conn.close()
